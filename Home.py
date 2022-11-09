@@ -9,7 +9,7 @@ st.set_page_config(
     page_icon= icon
 )
 st.title("Selamat Datang di Program Rekomendasi PMB FTI UKDW")
-st.write("Pilih jalur registrasi data pada sidebar")
+st.write("👈 Pilih jalur registrasi data pada sidebar")
 
 # st.session_state['option'] = 'Masukkan Opsi'
 # if st.session_state['option']=='Masukkan Opsi' :
