@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import sklearn
 from PIL import Image
 icon = Image.open('icon_ukdw.png')
 
