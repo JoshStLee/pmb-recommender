@@ -16,7 +16,7 @@ daftar_sekolah = pd.read_csv('daftar_sekolah.csv')[['id_daftar_sekolah','sekolah
 daftar_provinsi = pd.read_csv('daftar_provinsi.csv')
 daftar_prodi = pd.read_csv('daftar_prodi.csv')
 
-model =  pickle.load(open('dumped_model.sav', 'rb'))
+regular_model =  pickle.load(open('regular_entry_model.sav', 'rb'))
 
 st.title("Rekomendasi Pemilihan Mahasiswa Baru Jalur Reguler")
 
@@ -47,7 +47,8 @@ with container_for_optional_text:
     if sekolah_asal == "TIDAK TERDAFTAR": 
         sekolah_asal = st.text_input("Masukkan nama sekolah")       
         if submitted:
-            df2 = pd.DataFrame([[daftar_sekolah.index[-1]+1,sekolah_asal,status_sekolah]], columns=['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal'])
+            df2 = pd.DataFrame([[daftar_sekolah.index[-1]+1,sekolah_asal,status_sekolah]], 
+                               columns=['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal'])
             daftar_sekolah = pd.concat([daftar_sekolah,df2])
             id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 'id_daftar_sekolah'].iloc[0]
 with container_when_submitted.container():     
@@ -88,6 +89,7 @@ dummy = pd.DataFrame(test)
 
 with table_when_submitted.container():
     if submitted:
-        result = model.predict(dummy)[0]
-        st.write("HASIL ML", result)
-        # st.table(dummy)
+        result = regular_model.predict(dummy)[0]
+        text_result = "DITERIMA" if result == 1 else "DITOLAK"
+        st.write("HASIL ML", result, text_result)
+        st.table(dummy)
