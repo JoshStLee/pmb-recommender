@@ -29,7 +29,7 @@ with st.form("my_form"):
     jurusan_sekolah = st.selectbox("Jurusan Sekolah",('IPA','IPS','Lainnya'))
     status_sekolah = st.selectbox("Status Sekolah",('NEGERI','SWASTA'))
     prodi_pilihan_1 = st.selectbox("Pilihan Prodi Pertama", daftar_prodi['nama_prodi'])
-    prodi_pilihan_1 = st.selectbox("Pilihan Prodi Kedua", daftar_prodi['nama_prodi'])
+    prodi_pilihan_2 = st.selectbox("Pilihan Prodi Kedua", daftar_prodi['nama_prodi'])
     avg_nilai_uan = st.number_input("Rata-rata nilai UAN")
     avg_nilai_rapor = st.number_input("Rata-rata nilai rapor")
     
