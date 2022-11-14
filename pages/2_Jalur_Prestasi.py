@@ -6,16 +6,32 @@ import sklearn
 from PIL import Image
 icon = Image.open('icon_ukdw.png')
 
-
-daftar_sekolah = pd.read_csv('daftar_sekolah.csv')[['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal']]
-daftar_provinsi = pd.read_csv('daftar_provinsi.csv')
-daftar_prodi = pd.read_csv('daftar_prodi.csv')
-
 st.set_page_config(
     page_title= "Rekomendasi Seleksi Prestasi",
     page_icon= icon,
     initial_sidebar_state = "collapsed"
 )
+
+if "daftar_sekolah" not in st.session_state :
+    st.session_state.daftar_sekolah = pd.DataFrame(columns=['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal'])
+    
+if "data_baru" not in st.session_state:
+    st.session_state.data_baru = pd.DataFrame(columns=['lokasi','status','tipe',
+                                'id_daftar_sekolah',
+                                'id_prodi_pilihan_1',
+                                'id_prodi_pilihan_2',
+                                'nilai_tpa_verbal',
+                                'nilai_tpa_spasial',
+                                'nilai_tpa_analogi',
+                                'nilai_tpa_numerik'])
+
+# st.dataframe(st.session_state.data_baru)
+# st.dataframe(st.session_state.daftar_sekolah)    
+daftar_sekolah = pd.read_csv('daftar_sekolah.csv')[['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal']]
+daftar_provinsi = pd.read_csv('daftar_provinsi.csv')
+daftar_prodi = pd.read_csv('daftar_prodi.csv')
+
+
 
 special_model =  pickle.load(open('special_entry_model.sav', 'rb'))
 
