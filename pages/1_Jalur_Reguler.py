@@ -12,6 +12,10 @@ st.set_page_config(
     page_icon= icon,
     initial_sidebar_state = "collapsed"
 )
+@st.cache
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv(index=False).encode('utf-8')
 
 if "daftar_sekolah" not in st.session_state :
     st.session_state.daftar_sekolah = pd.read_csv('daftar_sekolah.csv')[['id_daftar_sekolah',
@@ -39,17 +43,18 @@ y = njp[['is_diterima']]
 X = njp.drop(['is_diterima'], axis=1)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.4, random_state = 42)
 
-def retrain_ml(X_train, y_train, regular_model):
-    train_baru = st.session_state.data_baru_reguler.drop(['is_diterima'],axis=1)
-    class_baru = st.session_state.data_baru_reguler[['is_diterima']]
+def retrain_ml(X_train, y_train, data_baru, regular_model):
+    train_baru = data_baru.drop(['is_diterima'],axis=1)
+    class_baru = data_baru[['is_diterima']]
     X_train = pd.concat([X_train,train_baru], ignore_index=True)
     y_train = pd.concat([y_train,class_baru], ignore_index=True)
     regular_model.fit(X_train.astype(int), y_train.astype(int))
-    st.session_state.data_baru_reguler.drop(st.session_state.data_baru_reguler.index, inplace=True)  
+    st.write("data dilatih")
+    # st.session_state.data_baru_reguler.drop(st.session_state.data_baru_reguler.index, inplace=True)  
 
 st.title("Rekomendasi Pemilihan Mahasiswa Baru Jalur Reguler")
 
-with st.form("my_form", clear_on_submit=True):
+with st.form("my_form"):
     kode_pendaftar = st.text_input("Kode Pendaftar","")
     provinsi_asal = st.selectbox("Provinsi Asal", daftar_provinsi[['provinsi']])
     container_for_selectbox = st.empty()
@@ -64,7 +69,7 @@ with st.form("my_form", clear_on_submit=True):
     nilai_tpa_numerik = st.number_input("Nilai TPA Numerik", step=1)
             
     submitted = st.form_submit_button("Submit")
-    container_when_submitted = st.empty()
+    # container_when_submitted = st.empty()
     id_prodi_pilihan_1 = daftar_prodi.loc[daftar_prodi['nama_prodi']==prodi_pilihan_1, 'id_prodi'].iloc[0]
     id_prodi_pilihan_2 = daftar_prodi.loc[daftar_prodi['nama_prodi']==prodi_pilihan_2, 'id_prodi'].iloc[0]
     id_provinsi = daftar_provinsi.loc[daftar_provinsi['provinsi']==provinsi_asal, 'id_provinsi'].iloc[0]
@@ -89,8 +94,26 @@ with container_for_optional_text:
             st.session_state.daftar_sekolah = daftar_sekolah
                 #session state now saves the new school list
         
-with container_when_submitted.container():       
-    test = pd.DataFrame({
+# with container_when_submitted.container():       
+test = pd.DataFrame({
+    'lokasi':[lokasi],
+    'status':[status],
+    'tipe':[tipe],
+    'id_daftar_sekolah':[id_daftar_sekolah],
+    'id_prodi_pilihan_1':[id_prodi_pilihan_1],
+    'id_prodi_pilihan_2':[id_prodi_pilihan_2],
+    'nilai_tpa_verbal':[nilai_tpa_verbal],
+    'nilai_tpa_spasial':[nilai_tpa_spasial],
+    'nilai_tpa_analogi':[nilai_tpa_analogi],
+    'nilai_tpa_numerik':[nilai_tpa_numerik]
+   })
+
+if submitted:
+    result = regular_model.predict(test)[0]
+    text_result = "DITERIMA" if result == 1 else "DITOLAK"
+    st.write("HASIL ML", text_result)
+
+    entry = pd.DataFrame({
         'lokasi':[lokasi],
         'status':[status],
         'tipe':[tipe],
@@ -100,48 +123,51 @@ with container_when_submitted.container():
         'nilai_tpa_verbal':[nilai_tpa_verbal],
         'nilai_tpa_spasial':[nilai_tpa_spasial],
         'nilai_tpa_analogi':[nilai_tpa_analogi],
-        'nilai_tpa_numerik':[nilai_tpa_numerik]
-       })
+        'nilai_tpa_numerik':[nilai_tpa_numerik],
+        'is_diterima':[result]
+    })
 
-    if submitted:
-        result = regular_model.predict(test)[0]
-        text_result = "DITERIMA" if result == 1 else "DITOLAK"
-        st.write("HASIL ML", text_result)
-        
-        entry = pd.DataFrame({
-            'lokasi':[lokasi],
-            'status':[status],
-            'tipe':[tipe],
-            'id_daftar_sekolah':[id_daftar_sekolah],
-            'id_prodi_pilihan_1':[id_prodi_pilihan_1],
-            'id_prodi_pilihan_2':[id_prodi_pilihan_2],
-            'nilai_tpa_verbal':[nilai_tpa_verbal],
-            'nilai_tpa_spasial':[nilai_tpa_spasial],
-            'nilai_tpa_analogi':[nilai_tpa_analogi],
-            'nilai_tpa_numerik':[nilai_tpa_numerik],
-            'is_diterima':[result]
-        })
-        
-        st.session_state.data_baru_reguler = pd.concat([st.session_state.data_baru_reguler, 
-                                                        entry], ignore_index=True) 
-        with container_for_selectbox:
-            sekolah_asal = st.selectbox("Sekolah Asal",daftar_sekolah[['sekolah_asal']])   
-            id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
-                                                       'id_daftar_sekolah'].iloc[0]    
-        with container_for_optional_text:
-            if sekolah_asal == "TIDAK TERDAFTAR": 
-                sekolah_asal = st.text_input("Masukkan nama sekolah")       
-                if submitted:
-                    df = pd.DataFrame([[daftar_sekolah.index[-1]+1,sekolah_asal,status_sekolah]], 
-                                      columns=['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal'])
-                    daftar_sekolah = pd.concat([daftar_sekolah,df], ignore_index=True)
-                    id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
-                                                           'id_daftar_sekolah'].iloc[0]
-                    st.session_state.daftar_sekolah = daftar_sekolah
-                        #session state now saves the new school list
-        
-if st.session_state.data_baru_reguler.shape[0]  >= 5:
-    if st.button('latih ulang ML'):
-        retrain_ml(X_train, y_train, regular_model)
+    st.session_state.data_baru_reguler = pd.concat([st.session_state.data_baru_reguler, 
+                                                    entry], ignore_index=True) 
+#   refresh select box daftar sekolah
+    with container_for_selectbox.container():
+        sekolah_asal = st.selectbox("Sekolah Asal",daftar_sekolah[['sekolah_asal']])   
+        id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
+                                                   'id_daftar_sekolah'].iloc[0]    
+    with container_for_optional_text.container():
+        if sekolah_asal == "TIDAK TERDAFTAR": 
+            sekolah_asal = st.text_input("Masukkan nama sekolah")       
+            if submitted:
+                df = pd.DataFrame([[daftar_sekolah.index[-1]+1,sekolah_asal,status_sekolah]], 
+                                  columns=['id_daftar_sekolah','sekolah_asal','tipe_sekolah_asal'])
+                daftar_sekolah = pd.concat([daftar_sekolah,df], ignore_index=True)
+                id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
+                                                       'id_daftar_sekolah'].iloc[0]
+                st.session_state.daftar_sekolah = daftar_sekolah
+                    #session state now saves the new school list
+                    
+if st.session_state.data_baru_reguler.shape[0] :   
+    if st.button('Tampilkan Data Keluaran'):
+        st.write(st.session_state.data_baru_reguler)
+    
+    # if st.button('Simpan Data Keluaran'):
+    data_luaran = convert_df(st.session_state.data_baru_reguler)
+    save_data = st.download_button(
+        label="Unduh Data Keluaran",
+        data=data_luaran,
+        file_name='output_program_rekomendasi.csv',
+        mime='text/csv',
+    )
+    if save_data :
+        st.session_state.data_baru_reguler.drop(st.session_state.data_baru_reguler.index, inplace=True)
+            
+with st.expander("Langkah untuk Latih Ulang Model"):
+    uploaded_data = st.file_uploader("Unggah Data Latih Baru Untuk ML")
+    if uploaded_data is not None:
+        data_latih = pd.read_csv(uploaded_data)
+        st.write("Data Unggahan")
+        st.dataframe(data_latih)
+        if st.button('Latih Ulang Model'):
+            retrain_ml(X_train, y_train, data_latih, regular_model)
         
             
