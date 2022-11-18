@@ -3,8 +3,9 @@ import pandas as pd
 import numpy as np
 import pickle
 from sklearn.ensemble import RandomForestClassifier
-from PIL import Image
 from sklearn.model_selection import train_test_split
+from PIL import Image
+
 icon = Image.open('icon_ukdw.png')
 
 st.set_page_config(
@@ -12,6 +13,7 @@ st.set_page_config(
     page_icon= icon,
     initial_sidebar_state = "collapsed"
 )
+
 @st.cache
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -24,19 +26,18 @@ if "daftar_sekolah" not in st.session_state :
     
 if "data_baru_reguler" not in st.session_state:
     st.session_state.data_baru_reguler = pd.DataFrame(columns=['lokasi','status','tipe',
-                                                       'id_daftar_sekolah',
-                                                       'id_prodi_pilihan_1',
-                                                       'id_prodi_pilihan_2',
-                                                       'nilai_tpa_verbal',
-                                                       'nilai_tpa_spasial',
-                                                       'nilai_tpa_analogi',
-                                                       'nilai_tpa_numerik',
-                                                       'is_diterima'])
+                                                               'id_daftar_sekolah',
+                                                               'id_prodi_pilihan_1',
+                                                               'id_prodi_pilihan_2',
+                                                               'nilai_tpa_verbal',
+                                                               'nilai_tpa_spasial',
+                                                               'nilai_tpa_analogi',
+                                                               'nilai_tpa_numerik',
+                                                               'is_diterima'])
     
 daftar_sekolah = st.session_state.daftar_sekolah
 daftar_provinsi = pd.read_csv('daftar_provinsi.csv')
 daftar_prodi = pd.read_csv('daftar_prodi.csv')
-regular_model = RandomForestClassifier(n_estimators=10)
 regular_model =  pickle.load(open('regular_entry_model.sav', 'rb'))
 njp = pd.read_csv('data_njp.csv')
 y = njp[['is_diterima']]
@@ -50,7 +51,6 @@ def retrain_ml(X_train, y_train, data_baru, regular_model):
     y_train = pd.concat([y_train,class_baru], ignore_index=True)
     regular_model.fit(X_train.astype(int), y_train.astype(int))
     st.write("data dilatih")
-    # st.session_state.data_baru_reguler.drop(st.session_state.data_baru_reguler.index, inplace=True)  
 
 st.title("Rekomendasi Pemilihan Mahasiswa Baru Jalur Reguler")
 
@@ -69,7 +69,6 @@ with st.form("my_form"):
     nilai_tpa_numerik = st.number_input("Nilai TPA Numerik", step=1)
             
     submitted = st.form_submit_button("Submit")
-    # container_when_submitted = st.empty()
     id_prodi_pilihan_1 = daftar_prodi.loc[daftar_prodi['nama_prodi']==prodi_pilihan_1, 'id_prodi'].iloc[0]
     id_prodi_pilihan_2 = daftar_prodi.loc[daftar_prodi['nama_prodi']==prodi_pilihan_2, 'id_prodi'].iloc[0]
     id_provinsi = daftar_provinsi.loc[daftar_provinsi['provinsi']==provinsi_asal, 'id_provinsi'].iloc[0]
@@ -80,7 +79,7 @@ with st.form("my_form"):
 with container_for_selectbox:
     sekolah_asal = st.selectbox("Sekolah Asal",daftar_sekolah[['sekolah_asal']])   
     id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
-                                               'id_daftar_sekolah'].iloc[0]    
+                                           'id_daftar_sekolah'].iloc[0]    
 
 with container_for_optional_text:
     if sekolah_asal == "TIDAK TERDAFTAR": 
@@ -92,9 +91,7 @@ with container_for_optional_text:
             id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
                                                    'id_daftar_sekolah'].iloc[0]
             st.session_state.daftar_sekolah = daftar_sekolah
-                #session state now saves the new school list
-        
-# with container_when_submitted.container():       
+    
 test = pd.DataFrame({
     'lokasi':[lokasi],
     'status':[status],
@@ -129,11 +126,12 @@ if submitted:
 
     st.session_state.data_baru_reguler = pd.concat([st.session_state.data_baru_reguler, 
                                                     entry], ignore_index=True) 
-#   refresh select box daftar sekolah
+    #   refresh select box daftar sekolah
     with container_for_selectbox.container():
         sekolah_asal = st.selectbox("Sekolah Asal",daftar_sekolah[['sekolah_asal']])   
         id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
-                                                   'id_daftar_sekolah'].iloc[0]    
+                                               'id_daftar_sekolah'].iloc[0]    
+        
     with container_for_optional_text.container():
         if sekolah_asal == "TIDAK TERDAFTAR": 
             sekolah_asal = st.text_input("Masukkan nama sekolah")       
@@ -144,18 +142,16 @@ if submitted:
                 id_daftar_sekolah = daftar_sekolah.loc[daftar_sekolah['sekolah_asal']==sekolah_asal, 
                                                        'id_daftar_sekolah'].iloc[0]
                 st.session_state.daftar_sekolah = daftar_sekolah
-                    #session state now saves the new school list
                     
 if st.session_state.data_baru_reguler.shape[0] :   
     if st.button('Tampilkan Data Keluaran'):
         st.write(st.session_state.data_baru_reguler)
     
-    # if st.button('Simpan Data Keluaran'):
     data_luaran = convert_df(st.session_state.data_baru_reguler)
     save_data = st.download_button(
         label="Unduh Data Keluaran",
         data=data_luaran,
-        file_name='output_program_rekomendasi.csv',
+        file_name='output_rekomendasi_jalur_reguler.csv',
         mime='text/csv',
     )
     if save_data :
