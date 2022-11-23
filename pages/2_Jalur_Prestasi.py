@@ -42,6 +42,34 @@ y = jp[['is_diterima']]
 X = jp.drop(['is_diterima'], axis=1)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.4, random_state = 42)
 
+def explore_tree(test, rfc, n_nodes, children_left,children_right, feature,threshold,
+                suffix='', print_tree= False, sample_id=0, feature_names=list(X.columns.values)):
+
+    node_indicator = rfc.decision_path(test)
+    leave_id = rfc.apply(test)
+    node_index = node_indicator.indices[node_indicator.indptr[sample_id]:
+                                        node_indicator.indptr[sample_id + 1]]
+    
+    for node_id in node_index:
+    
+        tabulation = ""
+        if leave_id[sample_id] == node_id:
+            st.write("%s==> Predicted leaf index"%(tabulation))
+
+        if (test.iloc[sample_id, feature[node_id]] <= threshold[node_id]):
+            threshold_sign = "<="
+        else:
+            threshold_sign = ">"
+
+        st.write("%s (= %s) %s %s"
+              % (X.columns.values[feature[node_id]],
+                 test.iloc[sample_id, feature[node_id]],
+                 threshold_sign,
+                 threshold[node_id]))
+    st.write("\n%sPrediction for submitted data: %s"%(tabulation,
+                                                 rfc.predict(test)[sample_id]))
+
+
 def retrain_ml(X_train, y_train, data_baru, model):
     train_baru = data_baru.drop(['is_diterima'],axis=1)
     class_baru = data_baru[['is_diterima']]
@@ -100,10 +128,30 @@ test = pd.DataFrame({
    })
 
 if submitted:
-    result = special_model.predict(dummy)[0]
+    # show predicted result
+    result = special_model.predict(test)[0]
     text_result = "DITERIMA" if result == 1 else "DITOLAK"
     st.write("HASIL ML", result, text_result)
 
+    # write the decision paths taken by the ML
+    with st.expander("Pengambilan Keputusan ML"):
+        n_nodes_ = [t.tree_.node_count for t in special_model.estimators_]
+        children_left_ = [t.tree_.children_left for t in special_model.estimators_]
+        children_right_ = [t.tree_.children_right for t in special_model.estimators_]
+        feature_ = [t.tree_.feature for t in special_model.estimators_]
+        threshold_ = [t.tree_.threshold for t in special_model.estimators_]
+        tabs_list = []
+        tabs_for_decision = st.empty()
+        for i,e in enumerate(special_model.estimators_):
+            tabs_list.append("Tree %d\n"%(i+1))
+            with tabs_for_decision.container():
+                tabs = st.tabs(tabs_list)
+                with tabs[i]:
+                    explore_tree(test, special_model.estimators_[i], n_nodes_[i], children_left_[i], 
+                                 children_right_[i], feature_[i],threshold_[i], suffix=i, 
+                                 sample_id=0, feature_names=list(X.columns.values))
+    
+    # save the data for download
     entry = pd.DataFrame({
         'lokasi':[lokasi],
         'status':[status],
@@ -135,6 +183,7 @@ if submitted:
                                                        'id_daftar_sekolah'].iloc[0]
                 st.session_state.daftar_sekolah = daftar_sekolah
 
+# show form data, download data, and retrain model                
 if st.session_state.data_baru_prestasi.shape[0] :   
     if st.button('Tampilkan Data Keluaran'):
         st.write(st.session_state.data_baru_prestasi)
@@ -156,4 +205,4 @@ with st.expander("Langkah untuk Latih Ulang Model"):
         st.write("Data Unggahan")
         st.dataframe(data_latih)
         if st.button('Latih Ulang Model'):
-            retrain_ml(X_train, y_train, data_latih, regular_model)
+            retrain_ml(X_train, y_train, data_latih, special_model)
