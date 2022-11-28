@@ -55,7 +55,7 @@ def explore_tree(test, rfc, n_nodes, children_left,children_right, feature,thres
         tabulation = ""
         if leave_id[sample_id] == node_id:
             st.write("%s==> Predicted leaf index"%(tabulation))
-
+            break
         if (test.iloc[sample_id, feature[node_id]] <= threshold[node_id]):
             threshold_sign = "<="
         else:
@@ -89,8 +89,8 @@ with st.form("my_form"):
     status_sekolah = st.selectbox("Status Sekolah",('NEGERI','SWASTA'))
     prodi_pilihan_1 = st.selectbox("Pilihan Prodi Pertama", daftar_prodi['nama_prodi'])
     prodi_pilihan_2 = st.selectbox("Pilihan Prodi Kedua", daftar_prodi['nama_prodi'])
-    avg_nilai_uan = st.number_input("Rata-rata nilai UAN")
-    avg_nilai_rapor = st.number_input("Rata-rata nilai rapor")
+    avg_nilai_uan = st.number_input("Rata-rata nilai UAN", step=0.1)
+    avg_nilai_rapor = st.number_input("Rata-rata nilai rapor", step=0.1)
     
     submitted = st.form_submit_button("Submit")
     id_prodi_pilihan_1 = daftar_prodi.loc[daftar_prodi['nama_prodi']==prodi_pilihan_1, 'id_prodi'].iloc[0]
@@ -128,29 +128,34 @@ test = pd.DataFrame({
    })
 
 if submitted:
-    # show predicted result
-    result = special_model.predict(test)[0]
-    text_result = "DITERIMA" if result == 1 else "DITOLAK"
-    st.write("HASIL ML", result, text_result)
-
     # write the decision paths taken by the ML
-    with st.expander("Pengambilan Keputusan ML"):
+    with st.expander("Penghitungan Keputusan ML"):
         n_nodes_ = [t.tree_.node_count for t in special_model.estimators_]
         children_left_ = [t.tree_.children_left for t in special_model.estimators_]
         children_right_ = [t.tree_.children_right for t in special_model.estimators_]
         feature_ = [t.tree_.feature for t in special_model.estimators_]
         threshold_ = [t.tree_.threshold for t in special_model.estimators_]
+        positive_counter = 0
+        negative_counter = 0
         tabs_list = []
         tabs_for_decision = st.empty()
         for i,e in enumerate(special_model.estimators_):
             tabs_list.append("Tree %d\n"%(i+1))
-            with tabs_for_decision.container():
+            with tabs_for_decision.container():    
+                output = special_model.estimators_[i].predict(test)[0]
+                if output == 1:
+                    positive_counter+=1
+                else :
+                    negative_counter+=1
                 tabs = st.tabs(tabs_list)
                 with tabs[i]:
                     explore_tree(test, special_model.estimators_[i], n_nodes_[i], children_left_[i], 
                                  children_right_[i], feature_[i],threshold_[i], suffix=i, 
                                  sample_id=0, feature_names=list(X.columns.values))
-    
+    # show predicted result
+    result = special_model.predict(test)[0]
+    st.write("HASIL ML: \n %s"% (positive_counter*10)+"% DT memberikan rekomendasi" )
+
     # save the data for download
     entry = pd.DataFrame({
         'lokasi':[lokasi],

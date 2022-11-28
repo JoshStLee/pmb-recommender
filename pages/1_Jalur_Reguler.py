@@ -58,7 +58,7 @@ def explore_tree(test, rfc, n_nodes, children_left,children_right, feature,thres
         tabulation = ""
         if leave_id[sample_id] == node_id:
             st.write("%s==> Predicted leaf index"%(tabulation))
-
+            break
         if (test.iloc[sample_id, feature[node_id]] <= threshold[node_id]):
             threshold_sign = "<="
         else:
@@ -69,8 +69,8 @@ def explore_tree(test, rfc, n_nodes, children_left,children_right, feature,thres
                  test.iloc[sample_id, feature[node_id]],
                  threshold_sign,
                  threshold[node_id]))
-    st.write("\n%sPrediction for submitted data: %s"%(tabulation,
-                                                 rfc.predict(test)[sample_id]))
+    result = rfc.predict(test)[sample_id]
+    st.write("\n%sPrediction for submitted data: %s"%(tabulation,result))
 
 def retrain_ml(X_train, y_train, data_baru, regular_model):
     train_baru = data_baru.drop(['is_diterima'],axis=1)
@@ -134,28 +134,34 @@ test = pd.DataFrame({
    })
 
 if submitted:
-    # show predicted result
-    result = regular_model.predict(test)[0]
-    text_result = "DITERIMA" if result == 1 else "DITOLAK"
-    st.write("HASIL ML", text_result)
-    
     # write the decision paths taken by the ML
-    with st.expander("Pengambilan Keputusan ML"):
+    with st.expander("Perhitungan Keputusan ML"):
         n_nodes_ = [t.tree_.node_count for t in regular_model.estimators_]
         children_left_ = [t.tree_.children_left for t in regular_model.estimators_]
         children_right_ = [t.tree_.children_right for t in regular_model.estimators_]
         feature_ = [t.tree_.feature for t in regular_model.estimators_]
         threshold_ = [t.tree_.threshold for t in regular_model.estimators_]
+        positive_counter = 0
+        negative_counter = 0
         tabs_list = []
-        tabs_for_decision = st.empty()
+        tabs_for_decision = st.empty() 
+
         for i,e in enumerate(regular_model.estimators_):
             tabs_list.append("Tree %d\n"%(i+1))
-            with tabs_for_decision.container():
+            with tabs_for_decision.container():    
+                output = regular_model.estimators_[i].predict(test)[0]
+                if output == 1:
+                    positive_counter+=1
+                else :
+                    negative_counter+=1
                 tabs = st.tabs(tabs_list)
                 with tabs[i]:
                     explore_tree(test, regular_model.estimators_[i], n_nodes_[i], children_left_[i], 
                                  children_right_[i], feature_[i],threshold_[i], suffix=i, 
                                  sample_id=0, feature_names=list(X.columns.values))
+    # show predicted result
+    result = regular_model.predict(test)[0]
+    st.write("HASIL ML: \n %s"% (positive_counter*10)+"% DT memberikan rekomendasi" )
     
     # save the data for download
     entry = pd.DataFrame({
@@ -215,4 +221,3 @@ with st.expander("Langkah untuk Latih Ulang Model"):
         if st.button('Latih Ulang Model'):
             retrain_ml(X_train, y_train, data_latih, regular_model)
         
-            
