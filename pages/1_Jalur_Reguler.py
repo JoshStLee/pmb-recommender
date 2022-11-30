@@ -80,7 +80,7 @@ def retrain_ml(X_train, y_train, data_baru, regular_model):
     regular_model.fit(X_train.astype(int), y_train.astype(int))
     st.write("data dilatih")
 
-st.title("Rekomendasi Pemilihan Mahasiswa Baru Jalur Reguler")
+st.title("Rekomendasi Seleksi Mahasiswa Baru Jalur Reguler")
 
 with st.form("my_form"):
     kode_pendaftar = st.text_input("Kode Pendaftar","")
