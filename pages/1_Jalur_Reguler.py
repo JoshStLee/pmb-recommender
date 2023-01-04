@@ -131,22 +131,25 @@ if submitted:
         positive_counter = 0
         tabs_list = []
         tabs_for_decision = st.empty() 
-
+        negative_tab_list = []
         for i,e in enumerate(regular_model.estimators_):
             tabs_list.append("Tree %d\n"%(i+1))
             with tabs_for_decision.container():    
                 output = regular_model.estimators_[i].predict(test)[0]
                 if output == 1:
                     positive_counter+=1
+                elif output== 0:
+                    negative_tab_list.append("Tree %d\n"%(i+1))
                 tabs = st.tabs(tabs_list)
                 with tabs[i]:
                     explore_tree(X, test, regular_model.estimators_[i], n_nodes_[i], children_left_[i], 
                                  children_right_[i], feature_[i],threshold_[i], suffix=i, 
                                  sample_id=0)
-    
+                
     # show predicted result
     result = regular_model.predict(test)[0]
-    st.write("%s"% (positive_counter*10)+"% DT memberikan rekomendasi" )
+    st.write("%s"% (positive_counter*10)+"% Tree dalam random forest memberikan rekomendasi" )
+    st.write(negative_tab_list)
     text_result = "DITERIMA" if result else "DITOLAK"
     st.write("HASIL AKHIR ML: "+ text_result)
     
@@ -191,5 +194,5 @@ with st.expander("Langkah untuk Latih Ulang Model"):
         st.write("Data Unggahan")
         st.dataframe(data_latih)
         if st.button('Latih Ulang Model'):
-            retrain_ml(X_train, y_train.values.ravel(), data_latih, regular_model)
+            retrain_ml(X_train, y_train, data_latih, regular_model)
         
